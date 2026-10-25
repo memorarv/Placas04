@@ -166,10 +166,11 @@ startBtn.addEventListener('click', async () => {
     worker = await Tesseract.createWorker('spa', 1, {
       langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast'
     });
+    
     await worker.setParameters({
-     tessedit_char_whitelist: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZabcdefghijklmnñopqrstuvwxyz0123456789-',
-     tessedit_pageseg_mode: '7'
+     tessedit_pageseg_mode: '6'
     });
+
     scanning = true;
     stopBtn.disabled = false;
     setStatus('reconocimiento activo. Enfoca una placa.');
