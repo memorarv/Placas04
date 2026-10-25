@@ -117,8 +117,8 @@ async function scanLoop() {
   }
   busy = true;
   try {
-    // Reduce the frame size to keep the demo responsive on mobile.
-    const scale = Math.min(1, 1000 / video.videoWidth);
+    const maxWidth = 800;
+    const scale = Math.min(1, maxWidth / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -163,7 +163,13 @@ startBtn.addEventListener('click', async () => {
     video.srcObject = stream;
     await video.play();
     setStatus('inicializando OCR…', 'La primera carga puede tardar unos segundos.');
-    worker = await Tesseract.createWorker('eng');
+    worker = await Tesseract.createWorker('spa', 1, {
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast'
+    });
+    await worker.setParameters({
+     tessedit_char_whitelist: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZabcdefghijklmnñopqrstuvwxyz0123456789-',
+     tessedit_pageseg_mode: '7'
+    });
     scanning = true;
     stopBtn.disabled = false;
     setStatus('reconocimiento activo. Enfoca una placa.');
