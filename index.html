@@ -32,11 +32,22 @@ small{color:#94a3b8}.hidden{display:none}.badge{display:inline-block;border-radi
     <button id="start" class="primary">Iniciar cámara y reconocimiento</button>
     <button id="stop" class="secondary" disabled>Detener</button>
   </div>
+  
   <section class="panel">
-    <div id="status">Estado: esperando que inicies la cámara.</div>
-    <p id="detail">Consejo: acerca la cámara, evita reflejos y mantén la placa enfocada.</p>
-    <small>El OCR se ejecuta en el navegador. El primer inicio puede tardar en descargar el motor de reconocimiento.</small>
+   <div id="status">Estado: esperando que inicies la cámara.</div>
+   <p id="detail">Consejo: acerca la cámara, evita reflejos y mantén la placa enfocada.</p>
+   <small>El OCR se ejecuta en el navegador. El primer inicio puede tardar en descargar el motor de reconocimiento.</small>
   </section>
+
+  <section class="panel">
+   <h2 style="font-size:1.05rem">Diagnóstico OCR</h2>
+   <p>Intentos realizados: <strong id="ocrAttempts">0</strong></p>
+   <p>Último reconocimiento: <strong id="ocrTime">—</strong></p>
+   <p>Tiempo total: <strong id="ocrTotal">0 s</strong></p>
+   <p>Texto reconocido:</p>
+   <pre id="ocrText" style="white-space:pre-wrap;overflow-wrap:anywhere;background:#0f172a;padding:10px;border-radius:8px;min-height:50px">Esperando reconocimiento…</pre>
+  </section>
+
   <section class="panel">
     <h2 style="font-size:1.05rem">Administrar placas (demo local)</h2>
     <p>Modifica los identificadores y URL del ejemplo. Los cambios se guardan solo en este navegador y dispositivo.</p>
@@ -66,7 +77,13 @@ const startBtn = document.querySelector('#start');
 const stopBtn = document.querySelector('#stop');
 let stream = null, worker = null, scanning = false, busy = false;
 let lastCandidate = '', streak = 0, redirected = false;
+let ocrAttempts = 0;
+let ocrStartTime = 0;
 
+const attemptsEl = document.querySelector('#ocrAttempts');
+const ocrTimeEl = document.querySelector('#ocrTime');
+const ocrTotalEl = document.querySelector('#ocrTotal');
+const ocrTextEl = document.querySelector('#ocrText');
 function normalize(s) {
   return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
@@ -122,8 +139,22 @@ async function scanLoop() {
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const startOCR = performance.now();
+
     const result = await worker.recognize(canvas);
+
+    const elapsed = performance.now() - startOCR;
     const text = result.data.text || '';
+
+    ocrAttempts++;
+    attemptsEl.textContent = ocrAttempts;
+    ocrTimeEl.textContent = Math.round(elapsed) + ' ms';
+    ocrTotalEl.textContent =
+     ((performance.now() - ocrStartTime) / 1000).toFixed(1) + ' s';
+
+    ocrTextEl.textContent = text.trim() || '(no se reconoció texto)';
+
     const compact = normalize(text);
     const records = getRecords();
     const match = records.find(r => {
@@ -163,6 +194,12 @@ startBtn.addEventListener('click', async () => {
     video.srcObject = stream;
     await video.play();
     setStatus('inicializando OCR…', 'La primera carga puede tardar unos segundos.');
+    ocrAttempts = 0;
+    ocrStartTime = performance.now();
+    attemptsEl.textContent = '0';
+    ocrTimeEl.textContent = '—';
+    ocrTotalEl.textContent = '0 s';
+    ocrTextEl.textContent = 'Inicializando OCR…';
     worker = await Tesseract.createWorker('spa', 1, {
       langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast'
     });
